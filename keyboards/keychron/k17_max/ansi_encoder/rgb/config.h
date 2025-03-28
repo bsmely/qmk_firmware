@@ -37,7 +37,7 @@
 #    define RGB_MATRIX_BRIGHTNESS_TURN_OFF_VAL 48
 
 /* Indications */
-#    define CAPS_LOCK_INDEX 57
+#    define CAPS_LOCK_INDEX 57 //0=esc, 19=~, 57=caps
 #    define NUM_LOCK_INDEX 34
 #    define LOW_BAT_IND_INDEX \
         { 94 }
