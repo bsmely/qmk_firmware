@@ -17,6 +17,30 @@
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
 
+//region tap-dance
+#include "tap_dance_utils.c"
+
+enum {
+  TD16 = 0,
+  TD17,
+  TD18,
+  TD19,
+  //TDESC,
+  TDPS,
+  TDNUM,
+};
+
+tap_dance_action_t tap_dance_actions[] = {
+  [TD16] = ACTION_TAP_DANCE_HOLD_TO_SHIFT(KC_F16),
+  [TD17] = ACTION_TAP_DANCE_HOLD_TO_SHIFT(KC_F17),
+  [TD18] = ACTION_TAP_DANCE_HOLD_TO_SHIFT(KC_F18),
+  [TD19] = ACTION_TAP_DANCE_HOLD_TO_SHIFT(KC_F19),
+  //[TDESC] = ACTION_TAP_DANCE_HOLD_TO_SHIFT(KC_ESC),
+  [TDPS] = ACTION_TAP_DANCE_HOLD_TO_SHIFT(KC_PSCR),
+  [TDNUM] = ACTION_TAP_DANCE_HOLD_TO_SHIFT(KC_NUM),
+};
+//endregion
+
 enum layers{
   MAC_BASE,
   MAC_FN,
@@ -43,8 +67,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______,  _______,  _______,                                _______,                                _______,  _______,    _______,  _______,  _______,  _______,  _______,            _______           ),
 
     [WIN_BASE] = LAYOUT_104_ansi(
-        KC_ESC,   KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,    KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,     KC_F12,   KC_PSCR,  KC_F16,   KC_DEL,   KC_F17,   KC_F18,   KC_F19,   KC_F24,
-        KC_GRV,   KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_MINS,    KC_EQL,   KC_BSPC,            KC_PGUP,  KC_NUM,   KC_PSLS,  KC_PAST,  KC_PMNS,
+        KC_ESC,   KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,    KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,     KC_F12,   TD(TDPS), TD(TD16), KC_DEL,   TD(TD17), TD(TD18), TD(TD19), KC_F24,
+        KC_GRV,   KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_MINS,    KC_EQL,   KC_BSPC,            KC_PGUP,  TD(TDNUM),KC_PSLS,  KC_PAST,  KC_PMNS,
         KC_TAB,   KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     KC_LBRC,    KC_RBRC,  KC_BSLS,            KC_PGDN,  KC_P7,    KC_P8,    KC_P9,    KC_PPLS,
         KC_F13,   KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,              KC_ENT,             KC_HOME,  KC_P4,    KC_P5,    KC_P6,
         KC_LSFT,            KC_Z,     KC_X,     KC_C,     KC_V,     KC_B,     KC_N,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,              KC_RSFT,  KC_UP,              KC_P1,    KC_P2,    KC_P3,    KC_PENT,
