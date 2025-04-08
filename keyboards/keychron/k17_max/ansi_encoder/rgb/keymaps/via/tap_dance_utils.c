@@ -71,21 +71,23 @@ int cur_dance (tap_dance_state_t *state) {
 //endregion
 
 //region ACTION_TAP_DANCE_HOLD_TO_SHIFT
-#define ACTION_TAP_DANCE_HOLD_TO_SHIFT(key_code) \
-    { .fn = {NULL, handle_tap_dance_hold_to_shift, handle_tap_dance_hold_to_shift_reset}, .user_data = (void *)(uintptr_t)(key_code) }
+#define ACTION_TAP_DANCE_HOLD_TO_SHIFT(key_code) { \
+        .fn = {NULL, handle_tap_dance_hold_to_shift, handle_tap_dance_hold_to_shift_reset}, \
+        .user_data = (void *)(uintptr_t)(key_code) \
+    }
+
+#define ACTION_TAP_DANCE_HOLD_TO_KEY(key_code_single, key_code_hold) { \
+        .fn = {NULL, handle_tap_dance_hold_to_key, handle_tap_dance_hold_to_key_reset}, \
+        .user_data = &(struct { uint16_t key_code_single; uint16_t key_code_hold; }) {key_code_single, key_code_hold} \
+    }
 
 void handle_tap_dance_hold_to_shift(tap_dance_state_t *state, void *user_data) {
     int key_code = (int)(uintptr_t)user_data; // Retrieve key code from user_data
     int current_state = cur_dance(state);
     switch (current_state) {
-        case SINGLE_TAP:
-            register_code(key_code);
-            break;
+        case SINGLE_TAP: register_code(key_code); break;
         case SINGLE_HOLD:
-            register_code(KC_LSFT);
-            register_code(key_code);
-            unregister_code(key_code);
-            unregister_code(KC_LSFT);
+            register_code(KC_LSFT); register_code(key_code); unregister_code(key_code); unregister_code(KC_LSFT);
             break;
     }
 }
@@ -94,15 +96,42 @@ void handle_tap_dance_hold_to_shift_reset(tap_dance_state_t *state, void *user_d
     int key_code = (int)(uintptr_t)user_data; // Retrieve key code from user_data
     int current_state = cur_dance(state);
     switch (current_state) {
-        case SINGLE_TAP:
-            unregister_code(key_code);
-            break;
-        case SINGLE_HOLD:
-            unregister_code(key_code);
-            unregister_code(KC_LSFT);
-            break;
+        case SINGLE_TAP: unregister_code(key_code); break;
+        case SINGLE_HOLD: unregister_code(key_code); unregister_code(KC_LSFT); break;
     }
 }
+
+void handle_tap_dance_hold_to_key(tap_dance_state_t *state, void *user_data) {
+      struct {
+         uint16_t key_code_single;
+         uint16_t key_code_hold;
+     } *key_codes = (void *)user_data;
+
+     uint16_t key_code_single = key_codes->key_code_single;
+     uint16_t key_code_hold = key_codes->key_code_hold;
+
+     int current_state = cur_dance(state);
+     switch (current_state) {
+         case SINGLE_TAP: register_code(key_code_single); break;
+         case SINGLE_HOLD: register_code(key_code_hold); break;
+     }
+ }
+
+void handle_tap_dance_hold_to_key_reset(tap_dance_state_t *state, void *user_data) {
+      struct {
+         uint16_t key_code_single;
+         uint16_t key_code_hold;
+     } *key_codes = (void *)user_data;
+
+     uint16_t key_code_single = key_codes->key_code_single;
+     uint16_t key_code_hold = key_codes->key_code_hold;
+
+     int current_state = cur_dance(state);
+     switch (current_state) {
+         case SINGLE_TAP: unregister_code(key_code_single); break;
+         case SINGLE_HOLD: unregister_code(key_code_hold); break;
+     }
+ }
 //endregion
 
 /* 4-functions usage example https://github.com/samhocevar-forks/qmk-firmware/blob/master/docs/feature_tap_dance.md
