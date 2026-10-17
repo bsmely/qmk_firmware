@@ -105,6 +105,48 @@ void handle_tap_dance_hold_to_shift_reset(tap_dance_state_t *state, void *user_d
 }
 //endregion
 
+//region ACTION_TAP_DANCE_HOLD_TO_COMMAND
+/* Hold sends a command instead of Shift+key: a Consumer Control usage from the range the HID Usage Tables
+ * reserve (0x07-0x1F). Windows knows no action for it, so nothing is typed and no modifier is touched;
+ * AutoHotkey reads it through Raw Input. Consumer reports go through the wireless module as they are,
+ * so it works the same over the cable, 2.4G and Bluetooth.
+ *
+ * The usage stays "pressed" until the key is released, like a media key: sent and released at once,
+ * the two reports could be merged in the wireless report buffer and the command lost.
+ * Tap keeps sending the key itself.
+ */
+#define ACTION_TAP_DANCE_HOLD_TO_COMMAND(key_code, command) \
+    { .fn = {NULL, handle_tap_dance_hold_to_command, handle_tap_dance_hold_to_command_reset}, .user_data = (void *)(uintptr_t)(((uint32_t)(command) << 16) | (key_code)) }
+
+static uint16_t active_hold_command = 0;
+
+void handle_tap_dance_hold_to_command(tap_dance_state_t *state, void *user_data) {
+    uint16_t key_code = (uint16_t)((uintptr_t)user_data & 0xFFFF);
+    uint16_t command  = (uint16_t)((uintptr_t)user_data >> 16);
+    switch (cur_dance(state)) {
+        case SINGLE_TAP:
+            register_code(key_code);
+            break;
+        case SINGLE_HOLD:
+            active_hold_command = command;
+            host_consumer_send(command);
+            break;
+    }
+}
+
+void handle_tap_dance_hold_to_command_reset(tap_dance_state_t *state, void *user_data) {
+    uint16_t key_code = (uint16_t)((uintptr_t)user_data & 0xFFFF);
+    uint16_t command  = (uint16_t)((uintptr_t)user_data >> 16);
+    // At reset the key is already up, so cur_dance() would say SINGLE_TAP even after a hold
+    if (active_hold_command == command) {
+        active_hold_command = 0;
+        host_consumer_send(0);
+    } else {
+        unregister_code(key_code);
+    }
+}
+//endregion
+
 /* 4-functions usage example https://github.com/samhocevar-forks/qmk-firmware/blob/master/docs/feature_tap_dance.md
 static tap xtap_state = {
   .state = 0
