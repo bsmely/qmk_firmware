@@ -18,3 +18,11 @@
 // Finer speed steps (default 16)
 #undef RGB_MATRIX_SPD_STEP
 #define RGB_MATRIX_SPD_STEP 8
+
+// Raw HID (VIA) over 2.4G/Bluetooth: Keychron's wireless code has it (common/wireless/wireless.c) but
+// no keyboard turns it on. AutoHotKey sets the lighting through VIA commands - this lets it do so
+// when the keyboard is not on the cable. The name is spelled as in Keychron's code.
+#define WILRESS_RAW_ENABLE
+// The code behind that flag never compiled: it calls via_raw_hid_receive(), which no longer exists -
+// Keychron's VIA entry point is raw_hid_receive(src, data, length) now, same arguments.
+#define via_raw_hid_receive raw_hid_receive
