@@ -17,6 +17,7 @@
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
 #include "keychron_rgb_type.h"
+#include "transport.h"
 
 extern os_indicator_config_t os_ind_cfg; // Keychron's OS indicator settings (common/rgb/keychron_rgb.c)
 extern void                  os_state_indicate(void);
@@ -123,6 +124,41 @@ void keyboard_post_init_user(void) {
 static void num_lock_indicator(void) {
     if (!host_keyboard_led_state().num_lock) {
         rgb_matrix_set_color(NUM_LOCK_INDEX, 255, 0, 0);
+    }
+}
+
+// Late LED driver re-init after a transport change. LED_DRIVER_REINIT_ON_TRANSPORT_CHANGE (config.h)
+// re-initialises the driver at the change itself, but the power is still settling then: switching from
+// 2.4G back to the cable, a solid colour blinked and the keys went dark again. The driver had been reset
+// once more, and the firmware did not know: a static effect renders the same frame, nothing is marked
+// for rewriting, and the cleared driver stays dark (Jungle changes every frame, so it came back by itself;
+// turning the lighting off and on through VIA brought a solid colour back too). Re-init once more when
+// the power has settled. rgb_matrix_init() reads the settings back from EEPROM - AutoHotKey saves them.
+#define LATE_REINIT_DELAYS_MS {1000, 3000}
+
+void housekeeping_task_user(void) {
+    static const uint16_t delays[] = LATE_REINIT_DELAYS_MS;
+    static transport_t    last     = TRANSPORT_NONE;
+    static uint8_t        pending  = 0;
+    static uint32_t       since    = 0;
+
+    transport_t now = get_transport();
+    if (now != last) {
+        if (last != TRANSPORT_NONE) {
+            pending = sizeof(delays) / sizeof(delays[0]);
+            since   = timer_read32();
+        }
+        last = now;
+    }
+    if (pending == 0) {
+        return;
+    }
+    uint8_t next = sizeof(delays) / sizeof(delays[0]) - pending;
+    if (timer_elapsed32(since) >= delays[next]) {
+        rgb_matrix_driver_shutdown();
+        wait_ms(20);
+        rgb_matrix_init();
+        pending--;
     }
 }
 
