@@ -17,9 +17,6 @@
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
 #include "keychron_rgb_type.h"
-#include "transport.h"
-#include "wireless.h"
-#include "usb_main.h"
 
 extern os_indicator_config_t os_ind_cfg; // Keychron's OS indicator settings (common/rgb/keychron_rgb.c)
 extern void                  os_state_indicate(void);
@@ -126,47 +123,6 @@ void keyboard_post_init_user(void) {
 static void num_lock_indicator(void) {
     if (!host_keyboard_led_state().num_lock) {
         rgb_matrix_set_color(NUM_LOCK_INDEX, 255, 0, 0);
-    }
-}
-
-// Connected: a while after the keyboard gets a host (power on, cable, 2.4G or Bluetooth), it sends
-// CONNECTED_COMMAND - a Consumer usage from the reserved range, like the hold commands. AutoHotKey
-// sets the lighting through VIA without saving it, so a keyboard that restarted or came back over
-// another link shows its saved mode until told again; this is the cue. The delay lets the host
-// finish setting the device up first.
-#define CONNECTED_COMMAND 0x1F
-#define CONNECTED_DELAY_MS 2000
-#define CONNECTED_HOLD_MS 50
-
-static bool host_connected(void) {
-    if (get_transport() == TRANSPORT_USB) {
-        return USB_DRIVER.state == USB_ACTIVE;
-    }
-    return wireless_get_state() == WT_CONNECTED;
-}
-
-void housekeeping_task_user(void) {
-    static bool     was_connected = false;
-    static uint8_t  stage         = 0; // 0 - idle, 1 - waiting to press, 2 - pressed
-    static uint32_t next          = 0;
-
-    bool connected = host_connected();
-    if (connected && !was_connected) {
-        stage = 1;
-        next  = timer_read32() + CONNECTED_DELAY_MS;
-    }
-    was_connected = connected;
-
-    if (stage == 0 || !connected || !timer_expired32(timer_read32(), next)) {
-        return;
-    }
-    if (stage == 1) {
-        host_consumer_send(CONNECTED_COMMAND);
-        stage = 2;
-        next  = timer_read32() + CONNECTED_HOLD_MS;
-    } else {
-        host_consumer_send(0);
-        stage = 0;
     }
 }
 
