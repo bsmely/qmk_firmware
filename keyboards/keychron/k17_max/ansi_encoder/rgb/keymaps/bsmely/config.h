@@ -26,3 +26,10 @@
 // The code behind that flag never compiled: it calls via_raw_hid_receive(), which no longer exists -
 // Keychron's VIA entry point is raw_hid_receive(src, data, length) now, same arguments.
 #define via_raw_hid_receive raw_hid_receive
+
+// Switching between the cable and 2.4G can brown-out reset the LED driver without resetting the MCU:
+// the lighting stays on in the settings but the keys go dark (seen on USB with a solid colour at full
+// brightness). Keychron's workaround re-initialises the driver on a transport change. The old
+// wireless_playground K17 Max config had it as REINIT_LED_DRIVER; the 2025q3 port lost it, while
+// K1/K2/K3/K8/K10 Max and others there define the new name.
+#define LED_DRIVER_REINIT_ON_TRANSPORT_CHANGE
