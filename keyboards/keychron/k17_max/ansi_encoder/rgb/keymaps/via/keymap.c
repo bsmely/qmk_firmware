@@ -94,6 +94,21 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
 #endif
 
 // clang-format on
+
+// The default lighting (config.h) applies only when the settings are reset, so the firmware switches
+// to it once by itself: the marker in the user EEPROM word says it has been done. A mode chosen later
+// stays - the switch does not repeat at every start.
+#define JUNGLE_DEFAULT_MARKER 0x4A4E4731 // "JNG1"
+
+void keyboard_post_init_user(void) {
+    if (eeconfig_read_user() != JUNGLE_DEFAULT_MARKER) {
+        rgb_matrix_mode(RGB_MATRIX_DEFAULT_MODE);
+        rgb_matrix_sethsv(RGB_MATRIX_DEFAULT_HUE, RGB_MATRIX_DEFAULT_SAT, rgb_matrix_get_val());
+        rgb_matrix_set_speed(RGB_MATRIX_DEFAULT_SPD);
+        eeconfig_update_user(JUNGLE_DEFAULT_MARKER);
+    }
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (!process_record_keychron_common(keycode, record)) {
         return false;
