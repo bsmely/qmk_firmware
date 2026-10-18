@@ -16,6 +16,10 @@
 
 #include QMK_KEYBOARD_H
 #include "keychron_common.h"
+#include "keychron_rgb_type.h"
+
+extern os_indicator_config_t os_ind_cfg; // Keychron's OS indicator settings (common/rgb/keychron_rgb.c)
+extern void                  os_state_indicate(void);
 
 //region tap-dance
 #include "tap_dance_utils.c"
@@ -101,6 +105,7 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
 #define JUNGLE_DEFAULT_MARKER 0x4A4E4731 // "JNG1"
 
 void keyboard_post_init_user(void) {
+    os_ind_cfg.disable.num_lock = true; // see rgb_matrix_indicators_keychron() below
     if (eeconfig_read_user() != JUNGLE_DEFAULT_MARKER) {
         rgb_matrix_mode(RGB_MATRIX_DEFAULT_MODE);
         rgb_matrix_sethsv(RGB_MATRIX_DEFAULT_HUE, RGB_MATRIX_DEFAULT_SAT, rgb_matrix_get_val());
@@ -110,23 +115,29 @@ void keyboard_post_init_user(void) {
 }
 
 // Num Lock: red while it is off, nothing while it is on (numbers are what this keyboard types by
-// default). Keychron's own indicator lights it while on, so it is skipped for Num Lock here;
-// the rest of rgb_matrix_indicators_keychron() (common/keychron_task.c) is kept as it is.
-#include "keychron_rgb_type.h"
-extern os_indicator_config_t os_ind_cfg;
-extern void                  os_state_indicate(void);
-
-bool rgb_matrix_indicators_keychron(void) {
-    bool num_lock_disabled         = os_ind_cfg.disable.num_lock;
-    os_ind_cfg.disable.num_lock    = true;
-    os_state_indicate();
-    os_ind_cfg.disable.num_lock    = num_lock_disabled;
+// default). Keychron lights its own (white) indicator while it is on from os_state_indicate(), which
+// is called from several places - the connection indicators and the backlight-off path among them -
+// so its Num Lock part is switched off for good (the flag is only in RAM; the Launcher may set it
+// back, which the next frame undoes). The rest of rgb_matrix_indicators_keychron()
+// (common/keychron_task.c) is kept as it is.
+static void num_lock_indicator(void) {
     if (!host_keyboard_led_state().num_lock) {
         rgb_matrix_set_color(NUM_LOCK_INDEX, 255, 0, 0);
     }
+}
+
+bool rgb_matrix_indicators_keychron(void) {
+    os_ind_cfg.disable.num_lock = true;
+    os_state_indicate();
+    num_lock_indicator();
 #if defined(LK_WIRELESS_ENABLE) || defined(KC_BLUETOOTH_ENABLE)
     extern bool rgb_matrix_indicators_bt(void);
     rgb_matrix_indicators_bt();
 #endif
     return true;
+}
+
+// Backlight off: only the indicators are drawn
+void rgb_matrix_none_indicators_user(void) {
+    num_lock_indicator();
 }
