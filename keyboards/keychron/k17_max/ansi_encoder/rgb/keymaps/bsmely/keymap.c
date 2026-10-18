@@ -127,39 +127,27 @@ static void num_lock_indicator(void) {
     }
 }
 
-// Late LED driver re-init after a transport change. LED_DRIVER_REINIT_ON_TRANSPORT_CHANGE (config.h)
-// re-initialises the driver at the change itself, but the power is still settling then: switching from
-// 2.4G back to the cable, a solid colour blinked and the keys went dark again. The driver had been reset
-// once more, and the firmware did not know: a static effect renders the same frame, nothing is marked
-// for rewriting, and the cleared driver stays dark (Jungle changes every frame, so it came back by itself;
-// turning the lighting off and on through VIA brought a solid colour back too). Re-init once more when
-// the power has settled. rgb_matrix_init() reads the settings back from EEPROM - AutoHotKey saves them.
-#define LATE_REINIT_DELAYS_MS {1000, 3000}
-
-void housekeeping_task_user(void) {
-    static const uint16_t delays[] = LATE_REINIT_DELAYS_MS;
-    static transport_t    last     = TRANSPORT_NONE;
-    static uint8_t        pending  = 0;
-    static uint32_t       since    = 0;
+// After a transport change Keychron re-initialises the LED driver (LED_DRIVER_REINIT_ON_TRANSPORT_CHANGE),
+// and the driver comes back with its PWM registers at zero, while the firmware's PWM buffer still holds
+// the previous frame and is not marked for writing. A static effect then renders the same frame, nothing
+// differs from the buffer, nothing is written - the keys stay dark while the lighting is on (Jungle
+// changes every frame and rewrites everything; turning the lighting off and on through VIA did too, by
+// writing a black frame first). So after a transport change write one black frame: the next one differs
+// from it everywhere and goes to the driver in full. The change is seen here on the pass after
+// transport_changed(), i.e. after the re-init.
+static void rewrite_leds_after_transport_change(void) {
+    static transport_t last = TRANSPORT_NONE;
 
     transport_t now = get_transport();
-    if (now != last) {
-        if (last != TRANSPORT_NONE) {
-            pending = sizeof(delays) / sizeof(delays[0]);
-            since   = timer_read32();
-        }
-        last = now;
+    if (now != last && last != TRANSPORT_NONE) {
+        rgb_matrix_set_color_all(0, 0, 0);
+        rgb_matrix_driver.flush();
     }
-    if (pending == 0) {
-        return;
-    }
-    uint8_t next = sizeof(delays) / sizeof(delays[0]) - pending;
-    if (timer_elapsed32(since) >= delays[next]) {
-        rgb_matrix_driver_shutdown();
-        wait_ms(20);
-        rgb_matrix_init();
-        pending--;
-    }
+    last = now;
+}
+
+void housekeeping_task_user(void) {
+    rewrite_leds_after_transport_change();
 }
 
 bool rgb_matrix_indicators_keychron(void) {
