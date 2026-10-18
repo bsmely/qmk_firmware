@@ -7,6 +7,11 @@
 // mid and bright levels, and rarely a flash. The level is shown with a gamma: LEDs are not linear, and
 // without it the dark levels would look lighter and the contrast would be lost.
 //
+// Tuned for the keyboard rather than copied from the PC: under keycaps at a usual brightness the PC
+// numbers left most keys looking off - a third of the targets were near darkness, and with gamma 1.8
+// the mid levels came out at a few percent. Here dark targets are rarer and a floor keeps every key
+// faintly lit, so the dark spots read as shade, not as dead keys.
+//
 // Hue and saturation are the matrix settings (green is hue 85), the peak is the brightness setting,
 // and speed sets the frame rate: 60 ms at speed 0, 40 ms (as on the PC) at 128, 20 ms at 255.
 
@@ -15,9 +20,10 @@ RGB_MATRIX_EFFECT(JUNGLE)
 #ifdef RGB_MATRIX_CUSTOM_EFFECT_IMPLS
 #    include <math.h>
 
-#    define JUNGLE_GAMMA 1.8f            // higher - darker gaps and more contrast
-#    define JUNGLE_DARK_CHANCE 0.35f     // near darkness: 0-3%
-#    define JUNGLE_BRIGHT_CHANCE 0.2f    // bright: 55-85%
+#    define JUNGLE_GAMMA 1.4f            // higher - darker gaps and more contrast
+#    define JUNGLE_FLOOR 0.06f           // share of the peak every key keeps even at level 0
+#    define JUNGLE_DARK_CHANCE 0.15f     // shade: 0-8%
+#    define JUNGLE_BRIGHT_CHANCE 0.3f    // bright: 65-95%
 #    define JUNGLE_FIREFLY_CHANCE 0.01f  // flash: 90-100%, fast
 #    define JUNGLE_RATE_MIN 0.04f        // share of the way to the target per frame
 #    define JUNGLE_RATE_MAX 0.3f
@@ -47,11 +53,11 @@ static void jungle_next_target(jungle_led_t *led) {
         led->target = jungle_random(0.9f, 1.0f);
         led->rate   = jungle_random(0.35f, 0.6f);
     } else if (chance < JUNGLE_FIREFLY_CHANCE + JUNGLE_DARK_CHANCE) {
-        led->target = jungle_random(0.0f, 0.03f);
+        led->target = jungle_random(0.0f, 0.08f);
     } else if (chance < JUNGLE_FIREFLY_CHANCE + JUNGLE_DARK_CHANCE + JUNGLE_BRIGHT_CHANCE) {
-        led->target = jungle_random(0.55f, 0.85f);
+        led->target = jungle_random(0.65f, 0.95f);
     } else {
-        led->target = jungle_random(0.12f, 0.45f);
+        led->target = jungle_random(0.25f, 0.6f);
     }
 }
 
@@ -107,7 +113,7 @@ bool JUNGLE(effect_params_t *params) {
         HSV           hsv = {
             .h = (uint8_t)(rgb_matrix_config.hsv.h + led->hue_shift),
             .s = rgb_matrix_config.hsv.s,
-            .v = (uint8_t)(peak * powf(led->level, JUNGLE_GAMMA) + 0.5f),
+            .v = (uint8_t)(peak * (JUNGLE_FLOOR + (1.0f - JUNGLE_FLOOR) * powf(led->level, JUNGLE_GAMMA)) + 0.5f),
         };
         RGB rgb = rgb_matrix_hsv_to_rgb(hsv);
         rgb_matrix_region_set_color(params->region, i, rgb.r, rgb.g, rgb.b);
